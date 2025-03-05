@@ -10,7 +10,8 @@ use App\Models\User;
 
 class AuthController extends Controller
 {
-    public function register (Request $request){
+    public function register(Request $request)
+    {
         try {
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string',
@@ -47,9 +48,15 @@ class AuthController extends Controller
         }
     }
 
-    public function login (Request $request){}
+    public function login(Request $request)
+    {
+    }
 
-    public function user(Request $request){}
+    public function user(Request $request)
+    {
+    }
 
-    public function logout(Request $request){}
+    public function logout(Request $request)
+    {
+    }
 }
