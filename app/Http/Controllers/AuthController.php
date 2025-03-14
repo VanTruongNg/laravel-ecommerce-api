@@ -3,26 +3,40 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\Session;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Validator;
 use App\Models\User;
 use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
+use Symfony\Component\Uid\UuidV4;
 
 class AuthController extends Controller
 {
     private function generateJWTToken($user)
     {
-        $payload = [
+        $accessPayload = [
             'user_id' => $user->id,
             'email' => $user->email,
             'name' => $user->name,
             'iat' => time(),
-            'exp' => time() + (60 * 60) // Token expires in 1 hour
+            'exp' => time() + (60 * 15),
+            'jti' => UuidV4::v4()
         ];
 
-        return JWT::encode($payload, env('JWT_SECRET'), 'HS256');
+        $refreshPayload = [
+            'user_id' => $user->id,
+            'type' => 'refresh',
+            'iat' => time(),
+            'exp' => time() + (60 * 60 * 24 * 7),
+            'jti' => UuidV4::v4()
+        ];
+
+        return [
+            'access_token' => JWT::encode($accessPayload, env('JWT_SECRET'), 'HS256'),
+            'refresh_token' => JWT::encode($refreshPayload, env('JWT_REFRESH_SECRET'), 'HS256')
+        ];
     }
 
     public function register(Request $request)
@@ -44,13 +58,10 @@ class AuthController extends Controller
                 'password' => Hash::make($request->password)
             ]);
 
-            $token = $this->generateJWTToken($user);
-
             return response()->json([
-                'user' => $user,
-                'access_token' => $token
-            ], 201);
-
+                'message' => 'User registered successfully',
+                'user' => $user
+            ]);
         } catch (\Exception $e) {
             \Log::error('Registration error: ' . $e->getMessage());
             return response()->json(['error' => 'Registration failed: ' . $e->getMessage()], 500);
@@ -77,10 +88,41 @@ class AuthController extends Controller
 
             $token = $this->generateJWTToken($user);
 
+            $session = new Session([
+                'user_id' => $user->id,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'last_activity' => now()->timestamp,
+                'payload' => json_encode([
+                    'device' => $request->userAgent(),
+                    'login_time' => now()->toISOString()
+                ])
+            ]);
+            $session->save();
+
+            $sessionId = "session:{$session->id}";
+
+            Redis::hmset($sessionId, [
+                'user_id' => $user->id,
+                'refresh_token' => $token['refresh_token'],
+                'access_token' => $token['access_token'],
+                'is_revoked' => 'false'
+            ]);
+            Redis::expire($sessionId, 60 * 24 * 7);
+
             return response()->json([
                 'user' => $user,
-                'access_token' => $token,
-            ]);
+                'access_token' => $token['access_token'],
+            ])->cookie(
+                    'session_id',
+                    $session->id,
+                    60 * 24 * 7,
+                    null,
+                    true,
+                    true,
+                    false,
+                    'Strict'
+                );
         } catch (\Exception $e) {
             \Log::error('Login error: ' . $e->getMessage());
             return response()->json(['error' => 'Login failed: ' . $e->getMessage()], 500);
@@ -90,25 +132,19 @@ class AuthController extends Controller
     public function user(Request $request)
     {
         try {
-            \Log::info('AuthController - User method start');
-            
+
             if (!$request->auth) {
-                \Log::error('AuthController - Auth data not found in request');
                 return response()->json(['error' => 'Auth data not found'], 500);
             }
-            
+
             $decoded = $request->auth;
-            \Log::info('AuthController - Auth data retrieved', ['user_id' => $decoded->user_id]);
-            
+
             $user = User::find($decoded->user_id);
-            \Log::info('AuthController - Database query executed', ['found' => (bool)$user]);
 
             if (!$user) {
-                \Log::warning('AuthController - User not found', ['user_id' => $decoded->user_id]);
                 return response()->json(['error' => 'User not found'], 404);
             }
 
-            \Log::info('AuthController - User found successfully');
             return response()->json(['user' => $user]);
         } catch (\Exception $e) {
             \Log::error('AuthController - User profile error', [
