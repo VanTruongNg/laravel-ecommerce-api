@@ -4,13 +4,31 @@ namespace App\Http\Controllers;
 
 use App\Models\Car;
 use Illuminate\Http\Request;
-use Validator;
+use Illuminate\Support\Facades\Validator;
+use App\utils\Response;
 
 class CarController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return Car::all();
+        $page = max(1, (int) $request->query('page', 1));
+        $limit = max(1, min(100, (int) $request->query('limit', 25)));
+
+        $cars = Car::query()
+            ->paginate($limit, ['*'], 'page', $page);
+
+        return Response::success(
+            'Cars retrieved successfully',
+            [
+                'cars' => $cars->items(),
+                'pagination' => [
+                    'current_page' => $cars->currentPage(),
+                    'last_page' => $cars->lastPage(),
+                    'per_page' => $cars->perPage(),
+                    'total' => $cars->total()
+                ]
+            ]
+        );
     }
 
     public function createCar(Request $request)
@@ -19,45 +37,111 @@ class CarController extends Controller
             $validator = Validator::make($request->all(), [
                 'make' => 'required|string',
                 'model' => 'required|string',
-                'year' => 'required|integer',
-                'color' => 'required|string',
+                'registration' => 'required|string|unique:cars,registration',
+                'engine_size' => 'required|string',
                 'price' => 'required|numeric'
-            ]);
-            
+            ])->stopOnFirstFailure();
+
             if ($validator->fails()) {
-                return response()->json(['error' => $validator->errors()], 400);
+                return Response::validationError(
+                    'Validation failed',
+                    $validator->errors()
+                );
             }
 
             $car = Car::create([
                 'make' => $request->make,
                 'model' => $request->model,
-                'year' => $request->year,
-                'color' => $request->color,
+                'registration' => $request->registration,
+                'engine_size' => $request->engine_size,
                 'price' => $request->price
             ]);
 
-            return response()->json($car, 201);
+            return Response::created(
+                'Car created successfully',
+                ['car' => $car]
+            );
 
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to create car'], 500);
+            return Response::serverError(
+                'Failed to create car',
+                $e->getMessage()
+            );
         }
     }
 
     public function show($id)
     {
-        return Car::findOrFail($id);
+        try {
+            $car = Car::findOrFail($id);
+            return Response::success(
+                'Car retrieved successfully',
+                ['car' => $car]
+            );
+        } catch (\Exception $e) {
+            return Response::notFound(
+                'Car not found',
+                $e->getMessage()
+            );
+        }
     }
 
     public function update(Request $request, $id)
     {
-        $car = Car::findOrFail($id);
-        $car->update($request->all());
-        return response()->json($car, 200);
+        try {
+            $validator = Validator::make($request->all(), [
+                'make' => 'string',
+                'model' => 'string',
+                'registration' => 'string|unique:cars,registration,' . $id,
+                'engine_size' => 'string',
+                'price' => 'numeric'
+            ])->stopOnFirstFailure();
+
+            if ($validator->fails()) {
+                return Response::validationError(
+                    'Validation failed',
+                    $validator->errors()
+                );
+            }
+
+            $car = Car::findOrFail($id);
+            $car->update($request->all());
+
+            return Response::success(
+                'Car updated successfully',
+                ['car' => $car]
+            );
+        } catch (\Exception $e) {
+            if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
+                return Response::notFound(
+                    'Car not found',
+                    $e->getMessage()
+                );
+            }
+            return Response::serverError(
+                'Failed to update car',
+                $e->getMessage()
+            );
+        }
     }
 
     public function destroy($id)
     {
-        Car::destroy($id);
-        return response()->json(null, 204);
+        try {
+            $car = Car::findOrFail($id);
+            $car->delete();
+            return Response::noContent();
+        } catch (\Exception $e) {
+            if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
+                return Response::notFound(
+                    'Car not found',
+                    $e->getMessage()
+                );
+            }
+            return Response::serverError(
+                'Failed to delete car',
+                $e->getMessage()
+            );
+        }
     }
 }
