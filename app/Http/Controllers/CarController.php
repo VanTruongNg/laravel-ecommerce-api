@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Car;
 use Illuminate\Http\Request;
+use Validator;
 
 class CarController extends Controller
 {
@@ -12,11 +13,34 @@ class CarController extends Controller
         return Car::all();
     }
 
-    public function store(Request $request)
+    public function createCar(Request $request)
     {
-        $request->merge(['id' => (string) \Illuminate\Support\Str::uuid()]);
-        $car = Car::create($request->all());
-        return response()->json($car, 201);
+        try {
+            $validator = Validator::make($request->all(), [
+                'make' => 'required|string',
+                'model' => 'required|string',
+                'year' => 'required|integer',
+                'color' => 'required|string',
+                'price' => 'required|numeric'
+            ]);
+            
+            if ($validator->fails()) {
+                return response()->json(['error' => $validator->errors()], 400);
+            }
+
+            $car = Car::create([
+                'make' => $request->make,
+                'model' => $request->model,
+                'year' => $request->year,
+                'color' => $request->color,
+                'price' => $request->price
+            ]);
+
+            return response()->json($car, 201);
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to create car'], 500);
+        }
     }
 
     public function show($id)

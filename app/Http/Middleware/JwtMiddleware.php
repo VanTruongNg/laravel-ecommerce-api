@@ -47,7 +47,12 @@ class JwtMiddleware
                     return response()->json(['error' => 'Token has expired'], 401);
                 }
 
-                //Thêm thông tin phiên vào request
+                // Kiểm tra xem token có chứa user ID không
+                if (!isset($decoded->sub)) {
+                    return response()->json(['error' => 'Invalid token format - Missing user ID'], 401);
+                }
+
+                //Thêm thông tin vào request
                 $request->auth = $decoded;
                 $request->session_data = $sessionData;
                 

@@ -17,16 +17,17 @@ class AuthController extends Controller
     private function generateJWTToken($user)
     {
         $accessPayload = [
-            'user_id' => $user->id,
+            'sub' => $user->id, // ID của user, theo chuẩn JWT
             'email' => $user->email,
             'name' => $user->name,
+            'role' => $user->role->value, // Thêm role vào payload
             'iat' => time(),
             'exp' => time() + (60 * 15),
             'jti' => UuidV4::v4()
         ];
 
         $refreshPayload = [
-            'user_id' => $user->id,
+            'sub' => $user->id, // ID của user, theo chuẩn JWT
             'type' => 'refresh',
             'iat' => time(),
             'exp' => time() + (60 * 60 * 24 * 7),
@@ -129,7 +130,7 @@ class AuthController extends Controller
 
             $decoded = $request->auth;
 
-            $user = User::find($decoded->user_id);
+            $user = User::find($decoded->sub);
 
             if (!$user) {
                 return response()->json(['error' => 'User not found'], 404);
