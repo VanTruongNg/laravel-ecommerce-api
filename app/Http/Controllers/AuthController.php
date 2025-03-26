@@ -11,22 +11,24 @@ use Illuminate\Support\Facades\Validator;
 use App\Models\User;
 use Firebase\JWT\JWT;
 use Symfony\Component\Uid\UuidV4;
+use App\utils\Response;
 
 class AuthController extends Controller
 {
     private function generateJWTToken($user)
     {
         $accessPayload = [
-            'user_id' => $user->id,
+            'sub' => $user->id,
             'email' => $user->email,
             'name' => $user->name,
+            'role' => $user->role->value,
             'iat' => time(),
             'exp' => time() + (60 * 15),
             'jti' => UuidV4::v4()
         ];
 
         $refreshPayload = [
-            'user_id' => $user->id,
+            'sub' => $user->id,
             'type' => 'refresh',
             'iat' => time(),
             'exp' => time() + (60 * 60 * 24 * 7),
@@ -44,12 +46,15 @@ class AuthController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string',
-                'email' => 'required|string|email|unique:users',
-                'password' => 'required|string|confirmed|min:6'
-            ]);
+                'password' => 'required|string|confirmed|min:6',
+                'email' => 'required|string|email|unique:users'
+            ])->stopOnFirstFailure();
 
             if ($validator->fails()) {
-                return response()->json(['error' => $validator->errors()], 400);
+                return Response::validationError(
+                    'Validation failed',
+                    $validator->errors()
+                );
             }
 
             $user = User::create([
@@ -58,13 +63,15 @@ class AuthController extends Controller
                 'password' => Hash::make($request->password)
             ]);
 
-            return response()->json([
-                'message' => 'User registered successfully',
-                'user' => $user
-            ]);
+            return Response::created(
+                'User registered successfully',
+                ['user' => $user]
+            );
         } catch (\Exception $e) {
-            \Log::error('Registration error: ' . $e->getMessage());
-            return response()->json(['error' => 'Registration failed: ' . $e->getMessage()], 500);
+            return Response::serverError(
+                'Registration failed',
+                $e->getMessage()
+            );
         }
     }
 
@@ -74,16 +81,21 @@ class AuthController extends Controller
             $validator = Validator::make($request->all(), [
                 'email' => 'required|string|email',
                 'password' => 'required|string',
-            ]);
+            ])->stopOnFirstFailure();
 
             if ($validator->fails()) {
-                return response()->json(['error' => $validator->errors()], 400);
+                return Response::validationError(
+                    'Validation failed',
+                    $validator->errors()
+                );
             }
 
             $user = User::where('email', $request->email)->first();
 
             if (!$user || !Hash::check($request->password, $user->password)) {
-                return response()->json(['error' => 'Invalid credentials'], 401);
+                return Response::unauthorized(
+                    'Invalid credentials'
+                );
             }
 
             $token = $this->generateJWTToken($user);
@@ -109,50 +121,90 @@ class AuthController extends Controller
             ]);
             Redis::expire($sessionId, 60 * 24 * 7);
 
-            return response()->json([
-                'user' => $user,
-                'access_token' => $token['access_token'],
-            ])->cookie('session_id', $session->id, 60 * 24 * 7, '/', null, false, true, false, 'None');
+            $response = Response::success(
+                'Login successful',
+                [
+                    'user' => $user,
+                    'access_token' => $token['access_token']
+                ]
+            );
+
+            return $response->cookie(
+                'session_id',
+                $session->id,
+                60 * 24 * 7,
+                '/',
+                null,
+                false,
+                true,
+                false,
+                'Strict'
+            );
         } catch (\Exception $e) {
-            \Log::error('Login error: ' . $e->getMessage());
-            return response()->json(['error' => 'Login failed: ' . $e->getMessage()], 500);
+            return Response::serverError(
+                'Login failed',
+                $e->getMessage()
+            );
         }
     }
 
     public function user(Request $request)
     {
         try {
-
             if (!$request->auth) {
-                return response()->json(['error' => 'Auth data not found'], 500);
+                return Response::unauthorized(
+                    'Auth data not found'
+                );
             }
 
             $decoded = $request->auth;
-
-            $user = User::find($decoded->user_id);
+            $user = User::find($decoded->sub);
 
             if (!$user) {
-                return response()->json(['error' => 'User not found'], 404);
+                return Response::notFound(
+                    'User not found'
+                );
             }
 
-            return response()->json(['user' => $user]);
+            return Response::success(
+                'User profile retrieved successfully',
+                ['user' => $user]
+            );
         } catch (\Exception $e) {
-            \Log::error('AuthController - User profile error', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            return response()->json(['error' => 'Failed to get user profile: ' . $e->getMessage()], 500);
+            return Response::serverError(
+                'Failed to get user profile',
+                $e->getMessage()
+            );
         }
     }
 
     public function refresh(Request $request)
     {
+        // Implementation pending
     }
 
-    public function logout()
+    public function logout(Request $request)
     {
-        // Since JWT is stateless, we don't need to do anything server-side
-        // The client should remove the token from storage
-        return response()->json(['message' => 'Successfully logged out']);
+        try {
+            $sessionId = $request->cookie('session_id');
+
+            if ($sessionId) {
+                Redis::del($sessionId);
+
+                $session = Session::find($sessionId);
+                if ($session) {
+                    $session->delete();
+                }
+            }
+
+            $response = Response::success('Successfully logged out');
+
+            return $response->cookie('session_id', '', -1);
+        } catch (\Exception $e) {
+            return Response::serverError(
+                'Logout failed',
+                $e->getMessage()
+            );
+        }
     }
 }
