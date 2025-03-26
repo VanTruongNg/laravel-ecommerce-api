@@ -147,7 +147,7 @@ return [
 
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'redis'),
-            'prefix' => 'e_commerce_',
+            'prefix' => '',
         ],
 
         'default' => [

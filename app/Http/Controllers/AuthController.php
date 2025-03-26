@@ -100,12 +100,11 @@ class AuthController extends Controller
             ]);
             $session->save();
 
-            $sessionId = "session:{$session->id}";
+            $sessionId = $session->id;
 
             Redis::hmset($sessionId, [
                 'user_id' => $user->id,
                 'refresh_token' => $token['refresh_token'],
-                'access_token' => $token['access_token'],
                 'is_revoked' => 'false'
             ]);
             Redis::expire($sessionId, 60 * 24 * 7);
@@ -113,16 +112,7 @@ class AuthController extends Controller
             return response()->json([
                 'user' => $user,
                 'access_token' => $token['access_token'],
-            ])->cookie(
-                    'session_id',
-                    $session->id,
-                    60 * 24 * 7,
-                    null,
-                    true,
-                    true,
-                    false,
-                    'Strict'
-                );
+            ])->cookie('session_id', $session->id, 60 * 24 * 7, '/', null, false, true, false, 'None');
         } catch (\Exception $e) {
             \Log::error('Login error: ' . $e->getMessage());
             return response()->json(['error' => 'Login failed: ' . $e->getMessage()], 500);
