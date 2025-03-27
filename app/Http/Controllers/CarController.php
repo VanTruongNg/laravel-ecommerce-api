@@ -88,7 +88,7 @@ class CarController extends Controller
                 'registration' => $request->registration,
                 'engine_size' => $request->engine_size,
                 'price' => $request->price,
-                'image_url' => $uploadData->data->url
+                'img_url' => $uploadData->data->url
             ]);
 
             DB::commit();
