@@ -29,3 +29,7 @@ Route::prefix('cars')->group(function () {
         Route::delete('/{id}', [CarController::class, 'destroy']);
     });
 });
+
+Route::prefix('upload')->group(function () {
+    Route::post('file', [\App\UploadService\UploaderService::class, 'uploadFile']);
+});
