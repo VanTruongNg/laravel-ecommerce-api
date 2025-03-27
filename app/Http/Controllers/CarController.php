@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Car;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 use App\utils\Response;
+use App\UploadService\uploaderService;
 
 class CarController extends Controller
 {
-    public function index(Request $request)
+    public function getAllCars(Request $request)
     {
         $page = max(1, (int) $request->query('page', 1));
         $limit = max(1, min(100, (int) $request->query('limit', 25)));
@@ -34,12 +36,15 @@ class CarController extends Controller
     public function createCar(Request $request)
     {
         try {
+            DB::beginTransaction();
+
             $validator = Validator::make($request->all(), [
                 'make' => 'required|string',
                 'model' => 'required|string',
                 'registration' => 'required|string|unique:cars,registration',
                 'engine_size' => 'required|string',
-                'price' => 'required|numeric'
+                'price' => 'required|numeric',
+                'image' => 'required|file|max:2048'
             ])->stopOnFirstFailure();
 
             if ($validator->fails()) {
@@ -49,13 +54,44 @@ class CarController extends Controller
                 );
             }
 
+            if (!$request->hasFile('image')) {
+                DB::rollBack();
+                return Response::badRequest(
+                    'No image provided',
+                    'Image file is required'
+                );
+            }
+
+            $uploaderService = new UploaderService();
+            $filename = $request->registration . '.' . $request->file('image')->getClientOriginalExtension();
+            
+            $uploadResult = $uploaderService->uploadFile(
+                $request->file('image'),
+                $filename
+            );
+
+            // Kiểm tra kết quả upload
+            $uploadData = $uploadResult->getData();
+
+            if ($uploadData->status === 'error') {
+                DB::rollBack();
+                return Response::serverError(
+                    'Tải lên ảnh thất bại',
+                    $uploadData->data->errors ?? 'Lỗi không xác định'
+                );
+            }
+
+            // Tạo car record với image URL
             $car = Car::create([
                 'make' => $request->make,
                 'model' => $request->model,
                 'registration' => $request->registration,
                 'engine_size' => $request->engine_size,
-                'price' => $request->price
+                'price' => $request->price,
+                'image_url' => $uploadData->data->url
             ]);
+
+            DB::commit();
 
             return Response::created(
                 'Car created successfully',
@@ -63,6 +99,7 @@ class CarController extends Controller
             );
 
         } catch (\Exception $e) {
+            DB::rollBack();
             return Response::serverError(
                 'Failed to create car',
                 $e->getMessage()

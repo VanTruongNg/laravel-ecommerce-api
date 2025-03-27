@@ -18,6 +18,7 @@ class Car extends Model
         'model',
         'registration',
         'engine_size',
+        'image_url',
         'price',
     ];
 }
