@@ -21,10 +21,10 @@ Route::prefix('cars')->group(function () {
     // Public endpoints
     Route::get('', [CarController::class, 'getAllCars']);
     Route::get('/{id}', [CarController::class, 'getCarByID']);
-
+    Route::post('', [CarController::class, 'createCar']);
     // Admin only endpoints
     Route::middleware([\App\Http\Middleware\JwtMiddleware::class, \App\Http\Middleware\CheckRole::class . ':admin'])->group(function () {
-        Route::post('', [CarController::class, 'createCar']);
+
         Route::put('/{id}', [CarController::class, 'update']);
         Route::delete('/{id}', [CarController::class, 'destroy']);
     });

@@ -19,8 +19,8 @@ class CreateCarsTable extends Migration
             $table->string('model');
             $table->string('registration');
             $table->string('engine_size');
-            $table->string('img_url')->nullable();
-            $table->decimal('price', 18, 2);
+            $table->decimal('price', 10, 2);
+            $table->string('image_url')->nullable();
             $table->timestamps();
         });
     }
