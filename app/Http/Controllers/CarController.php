@@ -6,10 +6,20 @@ use App\Models\Car;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\utils\Response;
+use App\Services\ImageService;
 
 class CarController extends Controller
 {
-    public function index(Request $request)
+    protected $imageService;
+    
+    public function __construct(ImageService $imageService)
+    {
+        $this->imageService = $imageService;
+    }
+
+
+    
+    public function getAllCars(Request $request)
     {
         $page = max(1, (int) $request->query('page', 1));
         $limit = max(1, min(100, (int) $request->query('limit', 25)));
@@ -39,8 +49,14 @@ class CarController extends Controller
                 'model' => 'required|string',
                 'registration' => 'required|string|unique:cars,registration',
                 'engine_size' => 'required|string',
-                'price' => 'required|numeric'
+                'price' => 'required|numeric',
+                'image_url' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
             ])->stopOnFirstFailure();
+
+            $imageUrl = null;
+            if($request->hasFile('image')) {
+                $imageUrl = $this->imageService->uploadImage($request->file('image'));
+            }
 
             if ($validator->fails()) {
                 return Response::validationError(
@@ -54,7 +70,8 @@ class CarController extends Controller
                 'model' => $request->model,
                 'registration' => $request->registration,
                 'engine_size' => $request->engine_size,
-                'price' => $request->price
+                'price' => $request->price,
+                'image_url' => $imageUrl,
             ]);
 
             return Response::created(
@@ -70,7 +87,7 @@ class CarController extends Controller
         }
     }
 
-    public function show($id)
+    public function getCarByID($id)
     {
         try {
             $car = Car::findOrFail($id);
@@ -94,7 +111,8 @@ class CarController extends Controller
                 'model' => 'string',
                 'registration' => 'string|unique:cars,registration,' . $id,
                 'engine_size' => 'string',
-                'price' => 'numeric'
+                'price' => 'numeric',
+                'image_url' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             ])->stopOnFirstFailure();
 
             if ($validator->fails()) {
@@ -105,8 +123,12 @@ class CarController extends Controller
             }
 
             $car = Car::findOrFail($id);
-            $car->update($request->all());
 
+            $car->update($request->all());
+            if ($request->hasFile('image')) {
+                $imageUrl = $this->imageService->uploadImage($request->file('image'));
+                $request->merge(['image_url' => $imageUrl]); // Merge the new image URL into the request data
+            }
             return Response::success(
                 'Car updated successfully',
                 ['car' => $car]
