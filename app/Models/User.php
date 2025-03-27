@@ -96,15 +96,6 @@ class User extends Authenticatable
     {
         return $this->hasRole(UserRole::ADMIN);
     }
-
-    /**
-     * Check if user is staff
-     */
-    public function isStaff(): bool
-    {
-        return $this->hasRole(UserRole::STAFF);
-    }
-
     /**
      * Check if user is customer
      */
