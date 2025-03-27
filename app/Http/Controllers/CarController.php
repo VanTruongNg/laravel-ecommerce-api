@@ -51,9 +51,6 @@ class CarController extends Controller
             ])->stopOnFirstFailure();
 
             $imageUrl = null;
-            if($request->hasFile('image')) {
-                $imageUrl = $this->imageService->uploadImage($request->file('image'));
-            }
 
             if ($validator->fails()) {
                 return Response::validationError(
@@ -154,10 +151,6 @@ class CarController extends Controller
             $car = Car::findOrFail($id);
 
             $car->update($request->all());
-            if ($request->hasFile('image')) {
-                $imageUrl = $this->imageService->uploadImage($request->file('image'));
-                $request->merge(['image_url' => $imageUrl]); // Merge the new image URL into the request data
-            }
             return Response::success(
                 'Car updated successfully',
                 ['car' => $car]
