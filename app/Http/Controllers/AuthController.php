@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use Date;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redis;
@@ -10,6 +11,7 @@ use Illuminate\Support\Facades\Validator;
 use App\Models\User;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+use Laravel\Socialite\Facades\Socialite;
 use Symfony\Component\Uid\UuidV4;
 use App\utils\Response;
 use Illuminate\Support\Facades\Log;
@@ -136,6 +138,70 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             return Response::serverError(
                 'Login failed',
+                $e->getMessage()
+            );
+        }
+    }
+
+    public function googleLogin () {
+        return response()->json()([
+            'url' => Socialite::driver('google')->stateless()->redirect()->getTargetUrl()
+        ]);
+    }
+
+    public function handleGoogleCallback(Request $request)
+    {
+        try {
+            $googleUser = Socialite::driver('google')->stateless()->user();
+            $user = User::where('email', $googleUser->getEmail())->first();
+
+            if (!$user) {
+                $user = User::create([
+                    'name' => $googleUser->getName(),
+                    'email' => $googleUser->getEmail(),
+                    'avatarUrl' => $googleUser->getAvatar(),
+                    'password' => Hash::make(str_random(16))
+                ]);
+            } else {
+                $user->avatarUrl = $user->avatarUrl ?? $googleUser->getAvatar();
+                $user->email_verified_at = $user->email_verified_at ?? now();
+                $user->save();
+            }
+
+            $sessionId = UuidV4::v4();
+            $token = $this->generateJWTToken($user, $sessionId);
+
+            $sessionKey = "session:" . $sessionId;
+            Redis::hmset($sessionKey, [
+                'user_id' => $user->id,
+                'refresh_token' => $token['refresh_token'],
+                'is_revoked' => 'false',
+                'device' => request()->userAgent(),
+                'ip_address' => request()->ip(),
+                'last_activity' => now()->timestamp
+            ]);
+            Redis::expire($sessionKey, 60 * 24 * 7);
+
+            return Response::success(
+                'Login successful',
+                [
+                    'user' => $user,
+                    'access_token' => $token['access_token']
+                ]
+            )->cookie(
+                'refresh_token',
+                $token['refresh_token'],
+                60 * 24 * 7,
+                '/',
+                null,
+                false,
+                true,
+                false,
+                'Lax'
+            );
+        } catch (\Exception $e) {
+            return Response::serverError(
+                'Google login failed',
                 $e->getMessage()
             );
         }
