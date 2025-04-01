@@ -3,31 +3,35 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Models\Session;
+use Date;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Validator;
 use App\Models\User;
 use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
+use Laravel\Socialite\Facades\Socialite;
 use Symfony\Component\Uid\UuidV4;
 use App\utils\Response;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
-    private function generateJWTToken($user)
+    private function generateJWTToken($user, $sessionId)
     {
         $accessPayload = [
             'sub' => $user->id,
             'email' => $user->email,
             'name' => $user->name,
-            'role' => $user->role->value,
             'iat' => time(),
             'exp' => time() + (60 * 15),
             'jti' => UuidV4::v4()
         ];
 
         $refreshPayload = [
+            'sid' => $sessionId,
             'sub' => $user->id,
             'type' => 'refresh',
             'iat' => time(),
@@ -98,28 +102,20 @@ class AuthController extends Controller
                 );
             }
 
-            $token = $this->generateJWTToken($user);
+            $sessionId = UuidV4::v4();
 
-            $session = new Session([
-                'user_id' => $user->id,
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-                'last_activity' => now()->timestamp,
-                'payload' => json_encode([
-                    'device' => $request->userAgent(),
-                    'login_time' => now()->toISOString()
-                ])
-            ]);
-            $session->save();
+            $token = $this->generateJWTToken($user, $sessionId);
 
-            $sessionId = $session->id;
-
-            Redis::hmset($sessionId, [
+            $sessionKey = "session:" . $sessionId;
+            Redis::hmset($sessionKey, [
                 'user_id' => $user->id,
                 'refresh_token' => $token['refresh_token'],
-                'is_revoked' => 'false'
+                'is_revoked' => 'false',
+                'device' => $request->userAgent(),
+                'ip_address' => $request->ip(),
+                'last_activity' => now()->timestamp
             ]);
-            Redis::expire($sessionId, 60 * 24 * 7);
+            Redis::expire($sessionKey, 60 * 24 * 7);
 
             $response = Response::success(
                 'Login successful',
@@ -130,19 +126,93 @@ class AuthController extends Controller
             );
 
             return $response->cookie(
-                'session_id',
-                $session->id,
+                'refresh_token',
+                $token['refresh_token'],
                 60 * 24 * 7,
                 '/',
                 null,
                 false,
                 true,
                 false,
-                'Strict'
+                'Lax'
             );
         } catch (\Exception $e) {
             return Response::serverError(
                 'Login failed',
+                $e->getMessage()
+            );
+        }
+    }
+
+    public function googleLogin()
+    {
+        return response()->json([
+            'url' => Socialite::driver('google')->stateless()->redirect()->getTargetUrl()
+        ]);
+    }
+
+    public function handleGoogleCallback(Request $request)
+    {
+        try {
+            // Disable SSL verification
+            config([
+                'services.google.guzzle.verify' => false
+            ]);
+
+            $googleUser = Socialite::driver('google')->stateless()->user();
+            $user = User::where('email', $googleUser->getEmail())->first();
+
+            if (!$user) {
+                $user = User::create([
+                    'name' => $googleUser->getName(),
+                    'email' => $googleUser->getEmail(),
+                    'avatarUrl' => $googleUser->getAvatar(),
+                    'password' => Hash::make(Str::random(16)),
+                    'email_verified_at' => now() // Thêm email_verified_at khi tạo user mới
+                ]);
+            } else {
+                if (!$user->email_verified_at) {
+                    $user->update(['email_verified_at' => now()]);
+                }
+                if (!$user->avatarUrl) {
+                    $user->update(['avatarUrl' => $googleUser->getAvatar()]);
+                }
+            }
+
+            $sessionId = UuidV4::v4();
+            $token = $this->generateJWTToken($user, $sessionId);
+
+            $sessionKey = "session:" . $sessionId;
+            Redis::hmset($sessionKey, [
+                'user_id' => $user->id,
+                'refresh_token' => $token['refresh_token'],
+                'is_revoked' => 'false',
+                'device' => request()->userAgent(),
+                'ip_address' => request()->ip(),
+                'last_activity' => now()->timestamp
+            ]);
+            Redis::expire($sessionKey, 60 * 24 * 7);
+
+            return Response::success(
+                'Login successful',
+                [
+                    'user' => $user,
+                    'access_token' => $token['access_token']
+                ]
+            )->cookie(
+                'refresh_token',
+                $token['refresh_token'],
+                60 * 24 * 7,
+                '/',
+                null,
+                false,
+                true,
+                false,
+                'Lax'
+            );
+        } catch (\Exception $e) {
+            return Response::serverError(
+                'Google login failed',
                 $e->getMessage()
             );
         }
@@ -186,20 +256,40 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         try {
-            $sessionId = $request->cookie('session_id');
+            $refreshToken = $request->cookie('refresh_token');
+            $authHeader = $request->header('Authorization');
 
-            if ($sessionId) {
-                Redis::del($sessionId);
-
-                $session = Session::find($sessionId);
-                if ($session) {
-                    $session->delete();
-                }
+            if (!$authHeader) {
+                return Response::unauthorized('Access token is required');
             }
 
-            $response = Response::success('Successfully logged out');
+            if (!$refreshToken) {
+                return Response::unauthorized('Refresh token is required');
+            }
 
-            return $response->cookie('session_id', '', -1);
+            try {
+                $decodedRefresh = JWT::decode($refreshToken, new Key(env('JWT_REFRESH_SECRET'), 'HS256'));
+                if (isset($decodedRefresh->sid)) {
+                    $sessionKey = "session:" . $decodedRefresh->sid;
+                    Redis::del($sessionKey);
+                }
+
+                $accessToken = str_replace('Bearer ', '', $authHeader);
+                $decodedAccess = JWT::decode($accessToken, new Key(env('JWT_SECRET'), 'HS256'));
+
+                $remainingTime = $decodedAccess->exp - time();
+                if ($remainingTime > 0) {
+                    $blacklistKey = "blacklist:" . $decodedAccess->jti;
+                    Redis::setex($blacklistKey, $remainingTime, 'true');
+                }
+
+                $response = Response::success('Successfully logged out');
+                return $response->cookie('refresh_token', '', -1);
+
+            } catch (\Exception $e) {
+                return Response::unauthorized('Invalid tokens');
+            }
+
         } catch (\Exception $e) {
             return Response::serverError(
                 'Logout failed',

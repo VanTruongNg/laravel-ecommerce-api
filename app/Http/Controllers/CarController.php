@@ -66,14 +66,6 @@ class CarController extends Controller
                 );
             }
 
-            if (!$request->hasFile('image')) {
-                DB::rollBack();
-                return Response::badRequest(
-                    'No image provided',
-                    'Image file is required'
-                );
-            }
-
             $uploaderService = new UploaderService();
             $filename = $request->registration . '.' . $request->file('image')->getClientOriginalExtension();
             
@@ -82,7 +74,6 @@ class CarController extends Controller
                 $filename
             );
 
-            // Kiểm tra kết quả upload
             $uploadData = $uploadResult->getData();
 
             if ($uploadData->status === 'error') {
@@ -93,7 +84,6 @@ class CarController extends Controller
                 );
             }
 
-            // Tạo car record với image URL
             $car = Car::create([
                 'make' => $request->make,
                 'model' => $request->model,

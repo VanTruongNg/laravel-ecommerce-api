@@ -41,6 +41,8 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'avatarUrl',
+        'email_verified_at'
     ];
 
     /**
@@ -68,20 +70,6 @@ class User extends Authenticatable
     }
 
     /**
-     * Get the sessions for the user.
-     */
-    public function sessions()
-    {
-        return $this->hasMany(Session::class);
-    }
-
-    public function activeSessions()
-    {
-        return $this->sessions()
-            ->where('last_activity', '>=', now()->subDays(7));
-    }
-
-    /**
      * Check if user has specific role
      */
     public function hasRole(UserRole $role): bool
@@ -96,6 +84,7 @@ class User extends Authenticatable
     {
         return $this->hasRole(UserRole::ADMIN);
     }
+    
     /**
      * Check if user is customer
      */

@@ -14,31 +14,12 @@ return new class extends Migration {
             $table->uuid('id')->primary();
             $table->string('name');
             $table->string('email')->unique();
+            $table->string('avatarUrl')->nullable()->default(null);
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->enum('role', ['admin', 'customer'])->default('customer');
             $table->rememberToken();
             $table->timestamps();
-        });
-
-        Schema::create('password_reset_tokens', function (Blueprint $table) {
-            $table->string('email')->primary();
-            $table->string('token');
-            $table->timestamp('created_at')->nullable();
-        });
-
-        Schema::create('sessions', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->uuid('user_id');
-            $table->string('ip_address', 45);
-            $table->text('user_agent');
-            $table->json('payload')->nullable();  // Lưu các thông tin phụ
-            $table->timestamp('last_activity');   // Đổi từ integer sang timestamp
-            $table->foreign('user_id')
-                ->references('id')
-                ->on('users')
-                ->onDelete('cascade');
-            $table->index(['user_id', 'last_activity']); // Index cho queries
         });
     }
 
@@ -47,8 +28,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('sessions');
-        Schema::dropIfExists('password_reset_tokens');
         Schema::dropIfExists('users');
     }
 };
