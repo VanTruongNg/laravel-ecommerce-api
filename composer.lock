@@ -4,7 +4,9 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "deadc95b124de45c7797e280bb165e80",
+
+
+    "content-hash": "9b3102c382b1c1d329230bb297e239a0",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -62,7 +64,8 @@
         },
         {
             "name": "aws/aws-sdk-php",
-            "version": "3.342.13",
+
+            "version": "3.342.14",
             "source": {
                 "type": "git",
                 "url": "https://github.com/aws/aws-sdk-php.git",
@@ -153,7 +156,9 @@
             "support": {
                 "forum": "https://github.com/aws/aws-sdk-php/discussions",
                 "issues": "https://github.com/aws/aws-sdk-php/issues",
-                "source": "https://github.com/aws/aws-sdk-php/tree/3.342.13"
+
+
+                "source": "https://github.com/aws/aws-sdk-php/tree/3.342.14"
             },
             "time": "2025-03-25T18:06:01+00:00"
         },

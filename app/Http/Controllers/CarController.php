@@ -7,20 +7,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use App\utils\Response;
-use App\Services\ImageService;
-use App\UploadService\UploaderService;
+
+
+use App\UploadService\uploaderService;
 
 class CarController extends Controller
 {
-    protected $imageService;
-    
-    public function __construct(ImageService $imageService)
-    {
-        $this->imageService = $imageService;
-    }
 
-
-    
     public function getAllCars(Request $request)
     {
         $page = max(1, (int) $request->query('page', 1));
@@ -54,7 +47,9 @@ class CarController extends Controller
                 'registration' => 'required|string|unique:cars,registration',
                 'engine_size' => 'required|string',
                 'price' => 'required|numeric',
-                'image_url' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
+
+                'image' => 'required|file|max:2048'
+
             ])->stopOnFirstFailure();
 
             $imageUrl = null;
@@ -90,7 +85,7 @@ class CarController extends Controller
                 'registration' => $request->registration,
                 'engine_size' => $request->engine_size,
                 'price' => $request->price,
-                'image_url' => $imageUrl,
+                'image_url' => $uploadData->data->url
             ]);
 
             DB::commit();
