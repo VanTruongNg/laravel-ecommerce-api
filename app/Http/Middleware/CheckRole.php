@@ -16,7 +16,6 @@ class CheckRole
      */
     public function handle(Request $request, Closure $next, string $role): Response
     {
-        // User đã được set bởi JwtMiddleware
         if (!$request->auth) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
