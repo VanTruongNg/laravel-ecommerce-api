@@ -15,6 +15,7 @@ use Laravel\Socialite\Facades\Socialite;
 use Symfony\Component\Uid\UuidV4;
 use App\utils\Response;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -143,8 +144,9 @@ class AuthController extends Controller
         }
     }
 
-    public function googleLogin () {
-        return response()->json()([
+    public function googleLogin()
+    {
+        return response()->json([
             'url' => Socialite::driver('google')->stateless()->redirect()->getTargetUrl()
         ]);
     }
@@ -152,6 +154,11 @@ class AuthController extends Controller
     public function handleGoogleCallback(Request $request)
     {
         try {
+            // Disable SSL verification
+            config([
+                'services.google.guzzle.verify' => false
+            ]);
+
             $googleUser = Socialite::driver('google')->stateless()->user();
             $user = User::where('email', $googleUser->getEmail())->first();
 
@@ -160,12 +167,16 @@ class AuthController extends Controller
                     'name' => $googleUser->getName(),
                     'email' => $googleUser->getEmail(),
                     'avatarUrl' => $googleUser->getAvatar(),
-                    'password' => Hash::make(str_random(16))
+                    'password' => Hash::make(Str::random(16)),
+                    'email_verified_at' => now() // Thêm email_verified_at khi tạo user mới
                 ]);
             } else {
-                $user->avatarUrl = $user->avatarUrl ?? $googleUser->getAvatar();
-                $user->email_verified_at = $user->email_verified_at ?? now();
-                $user->save();
+                if (!$user->email_verified_at) {
+                    $user->update(['email_verified_at' => now()]);
+                }
+                if (!$user->avatarUrl) {
+                    $user->update(['avatarUrl' => $googleUser->getAvatar()]);
+                }
             }
 
             $sessionId = UuidV4::v4();
