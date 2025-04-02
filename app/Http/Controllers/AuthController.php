@@ -25,6 +25,7 @@ class AuthController extends Controller
             'sub' => $user->id,
             'email' => $user->email,
             'name' => $user->name,
+            'role' => $user->role,
             'iat' => time(),
             'exp' => time() + (60 * 15),
             'jti' => UuidV4::v4()
@@ -34,6 +35,7 @@ class AuthController extends Controller
             'sid' => $sessionId,
             'sub' => $user->id,
             'type' => 'refresh',
+            'role' => $user->role,
             'iat' => time(),
             'exp' => time() + (60 * 60 * 24 * 7),
             'jti' => UuidV4::v4()
@@ -154,7 +156,6 @@ class AuthController extends Controller
     public function handleGoogleCallback(Request $request)
     {
         try {
-            // Disable SSL verification
             config([
                 'services.google.guzzle.verify' => false
             ]);
@@ -168,7 +169,7 @@ class AuthController extends Controller
                     'email' => $googleUser->getEmail(),
                     'avatarUrl' => $googleUser->getAvatar(),
                     'password' => Hash::make(Str::random(16)),
-                    'email_verified_at' => now() // Thêm email_verified_at khi tạo user mới
+                    'email_verified_at' => now()
                 ]);
             } else {
                 if (!$user->email_verified_at) {
@@ -193,23 +194,7 @@ class AuthController extends Controller
             ]);
             Redis::expire($sessionKey, 60 * 24 * 7);
 
-            return Response::success(
-                'Login successful',
-                [
-                    'user' => $user,
-                    'access_token' => $token['access_token']
-                ]
-            )->cookie(
-                'refresh_token',
-                $token['refresh_token'],
-                60 * 24 * 7,
-                '/',
-                null,
-                false,
-                true,
-                false,
-                'Lax'
-            );
+            return redirect()->away(env('FRONTEND_URL') . '/auth/google/success?access_token=' . $token['access_token'] . '&refresh_token=' . $token['refresh_token']);
         } catch (\Exception $e) {
             return Response::serverError(
                 'Google login failed',
