@@ -24,7 +24,6 @@ class Token extends Model
         'user_id',
         'token',
         'type',
-        'is_valid',
         'expires_at'
     ];
 
@@ -32,7 +31,6 @@ class Token extends Model
     {
         return [
             'type' => TokenType::class,
-            'is_valid' => 'boolean',
             'expires_at' => 'datetime',
         ];
     }

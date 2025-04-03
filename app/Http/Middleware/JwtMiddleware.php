@@ -29,17 +29,21 @@ class JwtMiddleware
             try {
                 $decoded = JWT::decode($token, new Key(env('JWT_SECRET') ?? '', 'HS256'));
 
+                if ($decoded->type === "refresh") {
+                    return response()->json(['error' => 'Unauthorized - Invalid token type'], 401);
+                }
+
+                $isBlacklist = Redis::get("blacklist:" . $decoded->jti);
+                if ($isBlacklist) {
+                    return response()->json(['error' => 'Token has revoked'], 401);
+                }
+
                 if (isset($decoded->exp) && time() > $decoded->exp) {
                     Log::warning('JWT Middleware - Token expired', [
                         'exp' => $decoded->exp,
                         'current_time' => time()
                     ]);
                     return response()->json(['error' => 'Token has expired'], 401);
-                }
-
-                $isBlacklist = Redis::get("blacklist:" . $decoded->jti);
-                if ($isBlacklist) {
-                    return response()->json(['error' => 'Token has revoked'], 401);
                 }
 
                 $request->auth = $decoded;

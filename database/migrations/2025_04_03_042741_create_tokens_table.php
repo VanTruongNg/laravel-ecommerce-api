@@ -13,7 +13,6 @@ return new class extends Migration
             $table->foreignUuid('user_id')->constrained('users')->onDelete('cascade');
             $table->string('token')->unique();
             $table->enum('type', ['email_verification', 'password_reset']);
-            $table->boolean('is_valid')->default(true);
             $table->timestamp('expires_at')->nullable();
             $table->timestamps();
         });
