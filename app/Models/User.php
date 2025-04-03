@@ -3,63 +3,40 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
-enum UserRole: string {
+enum UserRole: string
+{
     case ADMIN = 'admin';
     case CUSTOMER = 'customer';
 }
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasUuids;
 
-    /**
-     * Indicates if the IDs are auto-incrementing.
-     *
-     * @var bool
-     */
     public $incrementing = false;
-
-    /**
-     * The data type of the ID.
-     *
-     * @var string
-     */
     protected $keyType = 'string';
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
-        'name',
+        'full_name',
         'email',
         'password',
         'role',
-        'avatarUrl',
-        'email_verified_at'
+        'avatar_url',
+        'email_verified_at',
+        'phone',
+        'address'
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
-        'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
@@ -70,7 +47,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user has specific role
+     * Kiểm tra người dùng có vai trò cụ thể
      */
     public function hasRole(UserRole $role): bool
     {
@@ -78,18 +55,33 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user is admin
+     * Kiểm tra người dùng có phải admin
      */
     public function isAdmin(): bool
     {
         return $this->hasRole(UserRole::ADMIN);
     }
-    
+
     /**
-     * Check if user is customer
+     * Kiểm tra người dùng có phải khách hàng
      */
     public function isCustomer(): bool
     {
         return $this->hasRole(UserRole::CUSTOMER);
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    public function tokens(): HasMany
+    {
+        return $this->hasMany(Token::class);
+    }
+
+    public function cart(): HasOne
+    {
+        return $this->hasOne(Cart::class);
     }
 }

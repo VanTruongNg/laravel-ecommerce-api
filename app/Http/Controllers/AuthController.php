@@ -51,7 +51,7 @@ class AuthController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'name' => 'required|string',
+                'full_name' => 'required|string',
                 'password' => 'required|string|confirmed|min:6',
                 'email' => 'required|string|email|unique:users'
             ])->stopOnFirstFailure();
@@ -64,9 +64,9 @@ class AuthController extends Controller
             }
 
             $user = User::create([
-                'name' => $request->name,
+                'full_name' => $request->full_name,
                 'email' => $request->email,
-                'password' => Hash::make($request->password)
+                'password' => Hash::make($request->password),
             ]);
 
             return Response::created(
