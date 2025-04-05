@@ -10,11 +10,15 @@ Route::prefix('auth')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
     Route::get('google', [AuthController::class, 'googleLogin']);
     Route::get('google/callback', [AuthController::class, 'handleGoogleCallback']);
+    Route::post('verify-email/{token}', [AuthController::class, 'verifyEmail']);
+    Route::post('resend-verification-email', [AuthController::class, 'resendVerificationToken']);
+    Route::post('send-reset-password-email', [AuthController::class, 'sendPasswordResetToken']);
+    Route::post('reset-password/{token}', [AuthController::class, 'resetPassword']);
+    Route::post('refresh', [AuthController::class, 'refresh']);
 
     // Protected routes
     Route::middleware([\App\Http\Middleware\JwtMiddleware::class])->group(function () {
         Route::get('user', [AuthController::class, 'user']);
-        Route::post('refresh', [AuthController::class, 'refresh']);
         Route::post('logout', [AuthController::class, 'logout']);
     });
 });

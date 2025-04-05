@@ -6,32 +6,34 @@ use Illuminate\Support\Facades\Schema;
 
 class CreateCarsTable extends Migration
 {
-    /**
-     * Run the migrations.
-     *
-     * 
-     */
     public function up(): void
     {
+        Schema::create('brands', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->string('name')->unique();
+            $table->string('country');
+            $table->string('banner_url')->nullable();
+            $table->timestamps();
+        });
+
         Schema::create('cars', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->string('make');
             $table->string('model');
-            $table->string('registration');
-            $table->string('engine_size');
-            $table->string('img_url')->nullable();
-            $table->decimal('price', 18, 2);
+            $table->year('year');
+            $table->foreignUuid('brand_id')->constrained('brands')->onDelete('cascade');
+            $table->string('color');
+            $table->decimal('price', 15, 2)->unsigned();
+            $table->string('image_url')->nullable();
+            $table->unsignedInteger('stock')->default(0);
+            $table->enum('fuel_type', ['gasoline', 'diesel', 'electric', 'hybrid']);
+            $table->enum('availability', ['in_stock', 'pre_order', 'out_of_stock'])->default('in_stock');
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
     public function down()
     {
         Schema::dropIfExists('cars');
+        Schema::dropIfExists('brands');
     }
 }
