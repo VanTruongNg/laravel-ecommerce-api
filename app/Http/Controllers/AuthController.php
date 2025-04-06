@@ -6,11 +6,11 @@ use App\Mail\ResetPasswordEmail;
 
 use App\Http\Controllers\Controller;
 use App\Mail\VerificationEmail;
+use App\Models\Cart;
 use App\Models\Token;
 use App\Models\User;
 use App\utils\Response;
 use Carbon\Carbon;
-use Date;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Illuminate\Http\Request;
@@ -33,7 +33,7 @@ class AuthController extends Controller
         $accessPayload = [
             'sub' => $user->id,
             'email' => $user->email,
-            'name' => $user->name,
+            'name' => $user->full_name,
             'role' => $user->role,
             'type' => 'access',
             'iat' => time(),
@@ -120,9 +120,18 @@ class AuthController extends Controller
             }
 
             $user = User::create([
-                'full_name' => $request->full_name,
-                'email' => $request->email,
-                'password' => Hash::make($request->password),
+                'full_name' => $request->input('full_name'),
+                'email' => $request->input('email'),
+                'password' => Hash::make($request->input('password')),
+                'role' => 'customer',
+                'avatar_url' => null,
+                'phone' => null,
+                'address' => null,
+                'email_verified_at' => null
+            ]);
+
+            Cart::create([
+                'user_id' => $user->id,
             ]);
 
             $token = $this->createVerificationToken($user);
@@ -321,8 +330,6 @@ class AuthController extends Controller
             }
 
             $user = User::where('email', $request->email)->first();
-
-            $user = User::where('email', $request->email)->first();
             if (!$user) {
                 return Response::notFound(
                     'User not found'
@@ -428,18 +435,25 @@ class AuthController extends Controller
 
             if (!$user) {
                 $user = User::create([
-                    'name' => $googleUser->getName(),
+                    'full_name' => $googleUser->getName(),
                     'email' => $googleUser->getEmail(),
-                    'avatarUrl' => $googleUser->getAvatar(),
+                    'avatar_url' => $googleUser->getAvatar(),
                     'password' => Hash::make(Str::random(16)),
-                    'email_verified_at' => now()
+                    'email_verified_at' => now(),
+                    'role' => 'customer',
+                    'phone' => null,
+                    'address' => null
                 ]);
             } else {
+                $updates = [];
                 if (!$user->email_verified_at) {
-                    $user->update(['email_verified_at' => now()]);
+                    $updates['email_verified_at'] = now();
                 }
-                if (!$user->avatarUrl) {
-                    $user->update(['avatarUrl' => $googleUser->getAvatar()]);
+                if (!$user->avatar_url) {
+                    $updates['avatar_url'] = $googleUser->getAvatar();
+                }
+                if (!empty($updates)) {
+                    $user->update($updates);
                 }
             }
 

@@ -1,8 +1,13 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BrandController;
+use App\Http\Controllers\OrderController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CarController;
+use App\Http\Controllers\CartController;
+use App\Http\Middleware\JwtMiddleware;
+use App\Http\Middleware\CheckRole;
 
 Route::prefix('auth')->group(function () {
     // Public routes
@@ -17,7 +22,7 @@ Route::prefix('auth')->group(function () {
     Route::post('refresh', [AuthController::class, 'refresh']);
 
     // Protected routes
-    Route::middleware([\App\Http\Middleware\JwtMiddleware::class])->group(function () {
+    Route::middleware([JwtMiddleware::class])->group(function () {
         Route::get('user', [AuthController::class, 'user']);
         Route::post('logout', [AuthController::class, 'logout']);
     });
@@ -26,11 +31,11 @@ Route::prefix('auth')->group(function () {
 Route::prefix('cars')->group(function () {
     // Public endpoints
     Route::get('', [CarController::class, 'getAllCars']);
-    Route::get('/{id}', [CarController::class, 'getCarByID']);
+    Route::get('/newest', [CarController::class, 'getNewestCar']);
+    Route::post('', [CarController::class, 'createCar']);
 
     // Admin only endpoints
-    Route::middleware([\App\Http\Middleware\JwtMiddleware::class, \App\Http\Middleware\CheckRole::class . ':admin'])->group(function () {
-        Route::post('', [CarController::class, 'createCar']);
+    Route::middleware([JwtMiddleware::class, CheckRole::class . ':admin'])->group(function () {
         Route::put('/{id}', [CarController::class, 'update']);
         Route::delete('/{id}', [CarController::class, 'destroy']);
     });
@@ -38,4 +43,42 @@ Route::prefix('cars')->group(function () {
 
 Route::prefix('upload')->group(function () {
     Route::post('file', [\App\UploadService\UploaderService::class, 'uploadFile']);
+});
+
+Route::prefix('brands')->group(function () {
+    // Public endpoints
+    Route::get('/', [BrandController::class, 'getAllBrands']);
+    Route::get('/{id}', [BrandController::class, 'getBrandByID']);
+
+    Route::middleware([JwtMiddleware::class, CheckRole::class . ':admin'])->group(function () {
+        // Admin only endpoints
+        Route::post('/', [BrandController::class, 'createBrand']);
+        Route::put('/{id}', [BrandController::class, 'updateBrand']);
+        Route::delete('/{id}', [BrandController::class, 'deleteBrand']);
+    });
+});
+
+Route::prefix('cart')->group(function () {
+    // Private endpoints
+    Route::middleware([JwtMiddleware::class])->group(function () {
+        Route::get('/me', [CartController::class, 'getCartByUserId']);
+        Route::post('/add', [CartController::class, 'addToCart']);
+        Route::delete('/remove', [CartController::class, 'removeFromCart']);
+        Route::delete('/clear', [CartController::class, 'clearCart']);
+    });
+});
+
+Route::prefix('order')->group(function() {
+    // Private endpoints
+    Route::middleware([JwtMiddleware::class])->group(function () {
+        Route::get('/me', [OrderController::class, 'getOrders']);
+        Route::get('/{id}', [OrderController::class, 'getOrderDetails']);
+        Route::post('/create', [OrderController::class, 'createOrder']);
+        Route::delete('/cancel/{id}', [OrderController::class, 'cancelOrder']);
+    });
+
+    // Admin only endpoints
+    Route::middleware([JwtMiddleware::class, CheckRole::class . ':admin'])->group(function () {
+        Route::get('/', [OrderController::class, 'getAllOrders']);
+    });
 });

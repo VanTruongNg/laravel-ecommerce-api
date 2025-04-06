@@ -6,6 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use App\Models\UserRole;
+use App\Models\User;
 
 class CheckRole
 {
@@ -20,7 +21,7 @@ class CheckRole
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        $user = \App\Models\User::find($request->auth->sub);
+        $user = User::find($request->auth->sub);
         if (!$user) {
             return response()->json(['message' => 'User not found'], 401);
         }

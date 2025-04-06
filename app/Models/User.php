@@ -35,14 +35,34 @@ class User extends Authenticatable
 
     protected $hidden = [
         'password',
+        'remember_token'
+    ];
+
+    protected $visible = [
+        'id',
+        'full_name',
+        'email',
+        'avatar_url',
+        'phone',
+        'email_verified_at',
+        'role',
+        'address',
+        'created_at',
+        'updated_at'
     ];
 
     protected function casts(): array
     {
         return [
+            'id' => 'string',
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
+            'avatar_url' => 'string',
+            'phone' => 'string',
+            'address' => 'string',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime'
         ];
     }
 
