@@ -11,164 +11,93 @@ use App\UploadService\uploaderService;
 
 class CarController extends Controller
 {
+    protected $uploaderService;
+    public function __construct(uploaderService $uploaderService)
+    {
+        $this->uploaderService = $uploaderService;
+    }
     public function getAllCars(Request $request)
     {
-        $page = max(1, (int) $request->query('page', 1));
-        $limit = max(1, min(100, (int) $request->query('limit', 25)));
+        try {
+            $limit = $request->input('limit', 12);
+            $cars = Car::with('brand')->paginate($limit);
 
-        $cars = Car::query()
-            ->paginate($limit, ['*'], 'page', $page);
-
-        return Response::success(
-            'Cars retrieved successfully',
-            [
+            return Response::success("Cars retrieved successfully", [
                 'cars' => $cars->items(),
-                'pagination' => [
-                    'current_page' => $cars->currentPage(),
-                    'last_page' => $cars->lastPage(),
-                    'per_page' => $cars->perPage(),
-                    'total' => $cars->total()
-                ]
-            ]
-        );
+                'total' => $cars->total(),
+                'current_page' => $cars->currentPage(),
+                'last_page' => $cars->lastPage(),
+                'per_page' => $cars->perPage(),
+                'next_page_url' => $cars->nextPageUrl(),
+                'prev_page_url' => $cars->previousPageUrl(),
+                'first_page_url' => $cars->url(1),
+            ]);
+        } catch (\Exception $e) {
+            return Response::serverError('An error occurred while retrieving cars', $e->getMessage());
+        }
+    }
+
+    public function getNewestCar()
+    {
+            $cars = Car::where('year', 2025)
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return Response::success("Cars from 2025 retrieved successfully", [
+                'cars' => $cars
+            ]);
     }
 
     public function createCar(Request $request)
     {
         try {
-            DB::beginTransaction();
-
             $validator = Validator::make($request->all(), [
-                'make' => 'required|string',
-                'model' => 'required|string',
-                'registration' => 'required|string|unique:cars,registration',
-                'engine_size' => 'required|string',
-                'price' => 'required|numeric',
-                'image' => 'required|file|max:2048'
-            ])->stopOnFirstFailure();
+                'model' => 'required|string|max:255',
+                'year' => 'required|integer|digits:4|between:1886,' . date('Y'),
+                'color' => 'required|string|max:50',
+                'brand_id' => 'required|exists:brands,id',
+                'price' => 'required|numeric|min:0',
+                'stock' => 'required|integer|min:0',
+                'fuel_type' => 'required|in:gasoline,diesel,electric,hybrid',
+                'image' => 'required|file|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            ]);
 
             if ($validator->fails()) {
-                return Response::validationError(
-                    'Validation failed',
-                    $validator->errors()
-                );
+                return Response::badRequest($validator->errors()->first(), 400);
             }
 
-            $uploaderService = new UploaderService();
-            $filename = $request->registration . '.' . $request->file('image')->getClientOriginalExtension();
-            
-            $uploadResult = $uploaderService->uploadFile(
-                $request->file('image'),
-                $filename
-            );
+            $file = $request->file('image');
+            $filename = strtolower(str_replace(' ', '_', $request->model)) . '.' . $file->getClientOriginalExtension();
+            $uploadResponse = $this->uploaderService->uploadFile($file, $filename);
 
-            $uploadData = $uploadResult->getData();
-
-            if ($uploadData->status === 'error') {
-                DB::rollBack();
-                return Response::serverError(
-                    'Tải lên ảnh thất bại',
-                    $uploadData->data->errors ?? 'Lỗi không xác định'
-                );
-            }
+            DB::beginTransaction();
 
             $car = Car::create([
-                'make' => $request->make,
                 'model' => $request->model,
-                'registration' => $request->registration,
-                'engine_size' => $request->engine_size,
+                'year' => $request->year,
+                'color' => $request->color,
                 'price' => $request->price,
-                'img_url' => $uploadData->data->url
+                'brand_id' => $request->brand_id,
+                'image_url' => $uploadResponse['data']['url'],
+                'stock' => $request->stock,
+                'fuel_type' => $request->fuel_type,
+                'availability' => $request->availability ?? 'in_stock',
             ]);
 
             DB::commit();
 
-            return Response::created(
-                'Car created successfully',
-                ['car' => $car]
-            );
-
+            return Response::success("Car created successfully", [
+                'car' => $car
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
-            return Response::serverError(
-                'Failed to create car',
-                $e->getMessage()
-            );
-        }
-    }
 
-    public function show($id)
-    {
-        try {
-            $car = Car::findOrFail($id);
-            return Response::success(
-                'Car retrieved successfully',
-                ['car' => $car]
-            );
-        } catch (\Exception $e) {
-            return Response::notFound(
-                'Car not found',
-                $e->getMessage()
-            );
+            return Response::serverError('An error occurred while creating the car', $e->getMessage());
         }
     }
 
     public function update(Request $request, $id)
     {
-        try {
-            $validator = Validator::make($request->all(), [
-                'make' => 'string',
-                'model' => 'string',
-                'registration' => 'string|unique:cars,registration,' . $id,
-                'engine_size' => 'string',
-                'price' => 'numeric'
-            ])->stopOnFirstFailure();
 
-            if ($validator->fails()) {
-                return Response::validationError(
-                    'Validation failed',
-                    $validator->errors()
-                );
-            }
-
-            $car = Car::findOrFail($id);
-            $car->update($request->all());
-
-            return Response::success(
-                'Car updated successfully',
-                ['car' => $car]
-            );
-        } catch (\Exception $e) {
-            if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
-                return Response::notFound(
-                    'Car not found',
-                    $e->getMessage()
-                );
-            }
-            return Response::serverError(
-                'Failed to update car',
-                $e->getMessage()
-            );
-        }
-    }
-
-    public function destroy($id)
-    {
-        try {
-            $car = Car::findOrFail($id);
-            $car->delete();
-            return Response::noContent();
-        } catch (\Exception $e) {
-            if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
-                return Response::notFound(
-                    'Car not found',
-                    $e->getMessage()
-                );
-            }
-            return Response::serverError(
-                'Failed to delete car',
-                $e->getMessage()
-            );
-        }
     }
 }

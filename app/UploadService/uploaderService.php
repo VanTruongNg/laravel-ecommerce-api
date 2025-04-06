@@ -12,29 +12,19 @@ class UploaderService extends Controller
     {
         try {
             if (!$file instanceof \Illuminate\Http\UploadedFile || empty($filename)) {
-                return Response::badRequest(
-                    'Invalid file or filename',
-                    [
-                        'error' => 'Invalid file or filename'
-                    ]
-                );
+                throw new \InvalidArgumentException('Invalid file or filename');
             }
 
             $path = Storage::disk('s3')->putFileAs('uploads', $file, $filename, 'public');
-
-            return Response::success(
-                'File uploaded successfully',
-                [
+            
+            return [
+                'success' => true,
+                'data' => [
                     'url' => Storage::disk('s3')->url($path)
                 ]
-            );
+            ];
         } catch (\Exception $e) {
-            return Response::serverError(
-                'File upload failed',
-                [
-                    'error' => $e->getMessage()
-                ]
-            );
+            throw new \Exception('File upload failed: ' . $e->getMessage());
         }
     }
 }
