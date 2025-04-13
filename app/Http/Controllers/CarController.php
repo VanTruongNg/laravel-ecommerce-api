@@ -19,33 +19,86 @@ class CarController extends Controller
     public function getAllCars(Request $request)
     {
         try {
+            $page = $request->input('page', 1);
             $limit = $request->input('limit', 12);
-            $cars = Car::with('brand')->paginate($limit);
+            $offset = ($page - 1) * $limit;
+
+            // Get total count
+            $total = Car::count();
+
+            // Get cars for current page
+            $cars = Car::with(['brand'])
+                ->select([
+                    'id',
+                    'model',
+                    'year',
+                    'brand_id',
+                    'color',
+                    'price',
+                    'image_url',
+                    'stock',
+                    'fuel_type',
+                    'availability',
+                    'created_at'
+                ])
+                ->skip($offset)
+                ->take($limit)
+                ->get();
+
+            // Calculate pagination info
+            $lastPage = ceil($total / $limit);
 
             return Response::success("Cars retrieved successfully", [
-                'cars' => $cars->items(),
-                'total' => $cars->total(),
-                'current_page' => $cars->currentPage(),
-                'last_page' => $cars->lastPage(),
-                'per_page' => $cars->perPage(),
-                'next_page_url' => $cars->nextPageUrl(),
-                'prev_page_url' => $cars->previousPageUrl(),
-                'first_page_url' => $cars->url(1),
+                'cars' => $cars,
+                'total' => $total,
+                'current_page' => (int) $page,
+                'last_page' => $lastPage,
+                'per_page' => (int) $limit
             ]);
         } catch (\Exception $e) {
             return Response::serverError('An error occurred while retrieving cars', $e->getMessage());
         }
     }
 
+    public function getCarByID($id)
+    {
+        try {
+            $car = Car::with('brand')->findOrFail($id);
+
+            return Response::success("Car retrieved successfully", [
+                'car' => $car
+            ]);
+        } catch (\Exception $e) {
+            return Response::serverError('An error occurred while retrieving the car', $e->getMessage());
+        }
+    }
+
     public function getNewestCar()
     {
+        try {
             $cars = Car::where('year', 2025)
+                ->select([
+                    'id',
+                    'model',
+                    'year',
+                    'brand_id',
+                    'color',
+                    'price',
+                    'image_url',
+                    'stock',
+                    'fuel_type',
+                    'availability',
+                    'created_at'
+                ])
                 ->orderBy('created_at', 'desc')
                 ->get();
 
             return Response::success("Cars from 2025 retrieved successfully", [
                 'cars' => $cars
             ]);
+        } catch (\Exception $e) {
+            return Response::serverError('An error occurred while retrieving the cars', $e->getMessage());
+        }
     }
 
     public function createCar(Request $request)
@@ -56,6 +109,7 @@ class CarController extends Controller
                 'year' => 'required|integer|digits:4|between:1886,' . date('Y'),
                 'color' => 'required|string|max:50',
                 'brand_id' => 'required|exists:brands,id',
+                'description' => 'nullable|string|max:100000000000',
                 'price' => 'required|numeric|min:0',
                 'stock' => 'required|integer|min:0',
                 'fuel_type' => 'required|in:gasoline,diesel,electric,hybrid',
@@ -96,8 +150,55 @@ class CarController extends Controller
         }
     }
 
-    public function update(Request $request, $id)
+    public function updateCar(Request $request, $id)
     {
+        try {
+            // Debug request data
+            \Log::info('Request all:', $request->all());
+            \Log::info('Request files:', $request->allFiles());
+            $validator = Validator::make($request->all(), [
+                'model' => 'sometimes|required|string|max:255',
+                'year' => 'sometimes|required|integer|digits:4|between:1886,' . date('Y'),
+                'color' => 'sometimes|required|string|max:50',
+                'brand_id' => 'sometimes|required|exists:brands,id',
+                'price' => 'sometimes|required|numeric|min:0',
+                'stock' => 'sometimes|required|integer|min:0',
+                'fuel_type' => 'sometimes|required|in:gasoline,diesel,electric,hybrid',
+                'image' => 'sometimes|required|file|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            ]);
 
+            if ($validator->fails()) {
+                return Response::badRequest($validator->errors()->first(), 400);
+            }
+
+            $car = Car::findOrFail($id);
+
+            if ($request->hasFile('image')) {
+                $file = $request->file('image');
+                $filename = strtolower(str_replace(' ', '_', $request->model)) . '.' . $file->getClientOriginalExtension();
+                $uploadResponse = $this->uploaderService->uploadFile($file, $filename);
+                $car->image_url = $uploadResponse['data']['url'];
+            }
+
+            $car->update($request->only(['model', 'year', 'color', 'price', 'brand_id', 'stock', 'fuel_type', 'availability']));
+
+            return Response::success("Car updated successfully", [
+                'car' => $car
+            ]);
+        } catch (\Exception $e) {
+            return Response::serverError('An error occurred while updating the car', $e->getMessage());
+        }
+    }
+
+    public function deleteCar($id)
+    {
+        try {
+            $car = Car::findOrFail($id);
+            $car->delete();
+
+            return Response::success("Car deleted successfully");
+        } catch (\Exception $e) {
+            return Response::serverError('An error occurred while deleting the car', $e->getMessage());
+        }
     }
 }
