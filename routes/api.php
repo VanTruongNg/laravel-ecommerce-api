@@ -8,6 +8,7 @@ use App\Http\Controllers\CarController;
 use App\Http\Controllers\CartController;
 use App\Http\Middleware\JwtMiddleware;
 use App\Http\Middleware\CheckRole;
+use App\Http\Controllers\PaymentController;
 
 Route::prefix('auth')->group(function () {
     // Public routes
@@ -32,12 +33,13 @@ Route::prefix('cars')->group(function () {
     // Public endpoints
     Route::get('', [CarController::class, 'getAllCars']);
     Route::get('/newest', [CarController::class, 'getNewestCar']);
-    Route::post('', [CarController::class, 'createCar']);
+    Route::get('/{id}', [CarController::class, 'getCarByID']);
 
     // Admin only endpoints
     Route::middleware([JwtMiddleware::class, CheckRole::class . ':admin'])->group(function () {
-        Route::put('/{id}', [CarController::class, 'update']);
-        Route::delete('/{id}', [CarController::class, 'destroy']);
+        Route::post('', [CarController::class, 'createCar']);
+        Route::post('/{id}', [CarController::class, 'updateCar']);
+        Route::delete('/{id}', [CarController::class, 'deleteCar']);
     });
 });
 
@@ -53,7 +55,7 @@ Route::prefix('brands')->group(function () {
     Route::middleware([JwtMiddleware::class, CheckRole::class . ':admin'])->group(function () {
         // Admin only endpoints
         Route::post('/', [BrandController::class, 'createBrand']);
-        Route::put('/{id}', [BrandController::class, 'updateBrand']);
+        Route::post('/{id}', [BrandController::class, 'updateBrand']);
         Route::delete('/{id}', [BrandController::class, 'deleteBrand']);
     });
 });
@@ -80,5 +82,12 @@ Route::prefix('order')->group(function() {
     // Admin only endpoints
     Route::middleware([JwtMiddleware::class, CheckRole::class . ':admin'])->group(function () {
         Route::get('/', [OrderController::class, 'getAllOrders']);
+    });
+});
+
+Route::prefix('payment')->group(function () {
+    Route::middleware([JwtMiddleware::class])->group(function () {
+        Route::post('/create-link', [PaymentController::class, 'createPaymentLink']);
+        Route::get('/check-status/{orderCode}', [PaymentController::class, 'checkPaymentStatus']);
     });
 });
