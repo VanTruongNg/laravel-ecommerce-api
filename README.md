@@ -10,14 +10,14 @@
   <a href="https://github.com/VanTruongNg/laravel-ecommerce-api"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License"></a>
 </p>
 
-## 📋 Mục lục
+## 📋 Table of Contents
 
--   [Giới thiệu](#-giới-thiệu)
--   [Tính năng chính](#-tính-năng-chính)
--   [Công nghệ sử dụng](#-công-nghệ-sử-dụng)
--   [Cấu trúc dự án](#-cấu-trúc-dự-án)
--   [Cài đặt](#-cài-đặt)
--   [Cấu hình môi trường](#-cấu-hình-môi-trường)
+-   [Introduction](#-introduction)
+-   [Key Features](#-key-features)
+-   [Tech Stack](#-tech-stack)
+-   [Project Structure](#-project-structure)
+-   [Installation](#-installation)
+-   [Environment Configuration](#-environment-configuration)
 -   [API Endpoints](#-api-endpoints)
 -   [Database Schema](#-database-schema)
 -   [Authentication & Authorization](#-authentication--authorization)
@@ -27,81 +27,81 @@
 -   [Contributing](#-contributing)
 -   [License](#-license)
 
-## 🎯 Giới thiệu
+## 🎯 Introduction
 
-**Laravel E-Commerce API** là một hệ thống backend RESTful API hoàn chỉnh cho ứng dụng bán xe hơi trực tuyến. Dự án được xây dựng trên Laravel 12, tích hợp JWT authentication, Redis caching, PayOS payment gateway, và AWS S3 storage.
+**Laravel E-Commerce API** is a complete RESTful API backend system for an online car dealership application. Built on Laravel 12, it integrates JWT authentication, Redis caching, PayOS payment gateway, and AWS S3 storage.
 
-### Điểm nổi bật
+### Highlights
 
--   ✅ RESTful API architecture với response chuẩn
--   ✅ JWT-based authentication với refresh token rotation
+-   ✅ RESTful API architecture with standardized responses
+-   ✅ JWT-based authentication with refresh token rotation
 -   ✅ Role-based access control (Admin/User)
--   ✅ Shopping cart với real-time inventory management
--   ✅ Order processing với multi-step workflow
--   ✅ Tích hợp PayOS payment gateway
+-   ✅ Shopping cart with real-time inventory management
+-   ✅ Order processing with multi-step workflow
+-   ✅ PayOS payment gateway integration
 -   ✅ Email verification & password reset
 -   ✅ OAuth2 Google login
--   ✅ File upload với AWS S3
+-   ✅ File upload with AWS S3
 -   ✅ Redis caching & session management
 -   ✅ Docker containerization
 
-## 🚀 Tính năng chính
+## 🚀 Key Features
 
 ### 1. Authentication & User Management
 
--   Đăng ký tài khoản với email verification
--   Đăng nhập với JWT token (access + refresh)
+-   User registration with email verification
+-   Login with JWT tokens (access + refresh)
 -   OAuth2 Google authentication
--   Password reset qua email
+-   Password reset via email
 -   Token refresh & revocation
 -   Role-based permissions (Admin/User)
 
 ### 2. Car Management
 
--   CRUD operations cho xe (Admin only)
--   Danh sách xe với pagination, filtering
--   Chi tiết xe với thông tin brand
--   Quản lý inventory (stock, availability)
--   Upload hình ảnh xe lên AWS S3
--   Các loại nhiên liệu: Gasoline, Diesel, Electric, Hybrid
+-   CRUD operations for cars (Admin only)
+-   Car listing with pagination and filtering
+-   Car details with brand information
+-   Inventory management (stock, availability)
+-   Car image upload to AWS S3
+-   Fuel types: Gasoline, Diesel, Electric, Hybrid
 
 ### 3. Brand Management
 
--   Quản lý thương hiệu xe (Admin only)
--   Danh sách brands
--   Chi tiết brand với danh sách xe
+-   Car brand management (Admin only)
+-   Brand listing
+-   Brand details with car list
 
 ### 4. Shopping Cart
 
--   Thêm/xóa sản phẩm vào giỏ hàng
--   Cập nhật số lượng
--   Xem giỏ hàng của user
+-   Add/remove products to/from cart
+-   Update quantity
+-   View user's cart
 -   Clear cart
 -   Real-time inventory validation
 
 ### 5. Order Management
 
--   Tạo đơn hàng từ cart hoặc direct purchase
--   Xem lịch sử đơn hàng
--   Chi tiết đơn hàng với order items
--   Hủy đơn hàng
+-   Create orders from cart or direct purchase
+-   View order history
+-   Order details with order items
+-   Cancel orders
 -   Order status tracking: Pending, Completed, Cancelled
--   Admin dashboard để quản lý tất cả orders
+-   Admin dashboard to manage all orders
 
 ### 6. Payment Processing
 
--   Tích hợp PayOS payment gateway
--   Tạo payment link cho đơn hàng
--   Kiểm tra trạng thái thanh toán
--   Webhook handling cho payment status
+-   PayOS payment gateway integration
+-   Create payment links for orders
+-   Check payment status
+-   Webhook handling for payment status
 -   Payment status: Pending, Paid, Cancelled
 
-## 🛠 Công nghệ sử dụng
+## 🛠 Tech Stack
 
 ### Backend Framework
 
--   **Laravel 12** - PHP framework hiện đại
--   **PHP 8.2+** - Latest PHP version với performance improvements
+-   **Laravel 12** - Modern PHP framework
+-   **PHP 8.2+** - Latest PHP version with performance improvements
 
 ### Authentication & Security
 
@@ -127,10 +127,10 @@
 
 ### Email
 
--   **Laravel Mail** - Email sending với blade templates
+-   **Laravel Mail** - Email sending with blade templates
 -   **SMTP** - Email delivery configuration
 
-## 📁 Cấu trúc dự án
+## 📁 Project Structure
 
 ```
 laravel-ecommerce-api/
@@ -177,18 +177,18 @@ laravel-ecommerce-api/
 └── README.md                            # This file
 ```
 
-## 💻 Cài đặt
+## 💻 Installation
 
-### Yêu cầu hệ thống
+### System Requirements
 
 -   PHP >= 8.2
 -   Composer
 -   MySQL >= 8.0
 -   Redis
--   Node.js & NPM (cho asset compilation)
+-   Node.js & NPM (for asset compilation)
 -   Docker & Docker Compose (optional, recommended)
 
-### Các bước cài đặt
+### Installation Steps
 
 #### 1. Clone repository
 
@@ -197,14 +197,14 @@ git clone https://github.com/VanTruongNg/laravel-ecommerce-api.git
 cd laravel-ecommerce-api
 ```
 
-#### 2. Cài đặt dependencies
+#### 2. Install dependencies
 
 ```bash
 composer install
 npm install
 ```
 
-#### 3. Tạo file .env
+#### 3. Create .env file
 
 ```bash
 cp .env.example .env
@@ -216,40 +216,40 @@ cp .env.example .env
 php artisan key:generate
 ```
 
-#### 5. Khởi động Docker services
+#### 5. Start Docker services
 
 ```bash
 docker-compose up -d
 ```
 
-Services sẽ chạy trên:
+Services will run on:
 
 -   **MySQL**: `localhost:3306`
 -   **phpMyAdmin**: `http://localhost:8080`
 -   **Redis**: `localhost:6379`
 -   **Redis Commander**: `http://localhost:8081`
 
-#### 6. Chạy migrations
+#### 6. Run migrations
 
 ```bash
 php artisan migrate
 ```
 
-#### 7. (Optional) Chạy seeders
+#### 7. (Optional) Run seeders
 
 ```bash
 php artisan db:seed
 ```
 
-#### 8. Khởi động development server
+#### 8. Start development server
 
 ```bash
 php artisan serve
 ```
 
-API sẽ chạy trên `http://localhost:8000`
+API will run on `http://localhost:8000`
 
-## ⚙️ Cấu hình môi trường
+## ⚙️ Environment Configuration
 
 ### Database Configuration
 
@@ -324,72 +324,72 @@ GOOGLE_REDIRECT_URI=http://localhost:8000/api/auth/google/callback
 
 ### Authentication Endpoints
 
-| Method | Endpoint                              | Description                 | Auth Required |
-| ------ | ------------------------------------- | --------------------------- | ------------- |
-| POST   | `/api/auth/register`                  | Đăng ký tài khoản mới       | ❌            |
-| POST   | `/api/auth/login`                     | Đăng nhập                   | ❌            |
-| GET    | `/api/auth/google`                    | Google OAuth login          | ❌            |
-| GET    | `/api/auth/google/callback`           | Google OAuth callback       | ❌            |
-| POST   | `/api/auth/verify-email/{token}`      | Xác thực email              | ❌            |
-| POST   | `/api/auth/resend-verification-email` | Gửi lại email xác thực      | ❌            |
-| POST   | `/api/auth/send-reset-password-email` | Gửi email reset password    | ❌            |
-| POST   | `/api/auth/reset-password/{token}`    | Reset password              | ❌            |
-| POST   | `/api/auth/refresh`                   | Refresh access token        | ❌            |
-| GET    | `/api/auth/user`                      | Lấy thông tin user hiện tại | ✅            |
-| POST   | `/api/auth/logout`                    | Đăng xuất                   | ✅            |
+| Method | Endpoint                              | Description               | Auth Required |
+| ------ | ------------------------------------- | ------------------------- | ------------- |
+| POST   | `/api/auth/register`                  | Register new account      | ❌            |
+| POST   | `/api/auth/login`                     | Login                     | ❌            |
+| GET    | `/api/auth/google`                    | Google OAuth login        | ❌            |
+| GET    | `/api/auth/google/callback`           | Google OAuth callback     | ❌            |
+| POST   | `/api/auth/verify-email/{token}`      | Verify email              | ❌            |
+| POST   | `/api/auth/resend-verification-email` | Resend verification email | ❌            |
+| POST   | `/api/auth/send-reset-password-email` | Send password reset email | ❌            |
+| POST   | `/api/auth/reset-password/{token}`    | Reset password            | ❌            |
+| POST   | `/api/auth/refresh`                   | Refresh access token      | ❌            |
+| GET    | `/api/auth/user`                      | Get current user info     | ✅            |
+| POST   | `/api/auth/logout`                    | Logout                    | ✅            |
 
 ### Car Endpoints
 
-| Method | Endpoint           | Description                  | Auth Required | Role  |
-| ------ | ------------------ | ---------------------------- | ------------- | ----- |
-| GET    | `/api/cars`        | Lấy danh sách xe (paginated) | ❌            | -     |
-| GET    | `/api/cars/newest` | Lấy xe mới nhất              | ❌            | -     |
-| GET    | `/api/cars/{id}`   | Lấy chi tiết xe              | ❌            | -     |
-| POST   | `/api/cars`        | Tạo xe mới                   | ✅            | Admin |
-| POST   | `/api/cars/{id}`   | Cập nhật xe                  | ✅            | Admin |
-| DELETE | `/api/cars/{id}`   | Xóa xe                       | ✅            | Admin |
+| Method | Endpoint           | Description              | Auth Required | Role  |
+| ------ | ------------------ | ------------------------ | ------------- | ----- |
+| GET    | `/api/cars`        | Get car list (paginated) | ❌            | -     |
+| GET    | `/api/cars/newest` | Get newest cars          | ❌            | -     |
+| GET    | `/api/cars/{id}`   | Get car details          | ❌            | -     |
+| POST   | `/api/cars`        | Create new car           | ✅            | Admin |
+| POST   | `/api/cars/{id}`   | Update car               | ✅            | Admin |
+| DELETE | `/api/cars/{id}`   | Delete car               | ✅            | Admin |
 
 ### Brand Endpoints
 
-| Method | Endpoint           | Description          | Auth Required | Role  |
-| ------ | ------------------ | -------------------- | ------------- | ----- |
-| GET    | `/api/brands`      | Lấy danh sách brands | ❌            | -     |
-| GET    | `/api/brands/{id}` | Lấy chi tiết brand   | ❌            | -     |
-| POST   | `/api/brands`      | Tạo brand mới        | ✅            | Admin |
-| POST   | `/api/brands/{id}` | Cập nhật brand       | ✅            | Admin |
-| DELETE | `/api/brands/{id}` | Xóa brand            | ✅            | Admin |
+| Method | Endpoint           | Description       | Auth Required | Role  |
+| ------ | ------------------ | ----------------- | ------------- | ----- |
+| GET    | `/api/brands`      | Get brand list    | ❌            | -     |
+| GET    | `/api/brands/{id}` | Get brand details | ❌            | -     |
+| POST   | `/api/brands`      | Create new brand  | ✅            | Admin |
+| POST   | `/api/brands/{id}` | Update brand      | ✅            | Admin |
+| DELETE | `/api/brands/{id}` | Delete brand      | ✅            | Admin |
 
 ### Cart Endpoints
 
 | Method | Endpoint           | Description           | Auth Required |
 | ------ | ------------------ | --------------------- | ------------- |
-| GET    | `/api/cart/me`     | Lấy giỏ hàng của user | ✅            |
-| POST   | `/api/cart/add`    | Thêm sản phẩm vào giỏ | ✅            |
-| DELETE | `/api/cart/remove` | Xóa sản phẩm khỏi giỏ | ✅            |
-| DELETE | `/api/cart/clear`  | Xóa toàn bộ giỏ hàng  | ✅            |
+| GET    | `/api/cart/me`     | Get user's cart       | ✅            |
+| POST   | `/api/cart/add`    | Add item to cart      | ✅            |
+| DELETE | `/api/cart/remove` | Remove item from cart | ✅            |
+| DELETE | `/api/cart/clear`  | Clear entire cart     | ✅            |
 
 ### Order Endpoints
 
-| Method | Endpoint                 | Description         | Auth Required | Role  |
-| ------ | ------------------------ | ------------------- | ------------- | ----- |
-| GET    | `/api/order`             | Lấy tất cả orders   | ✅            | Admin |
-| GET    | `/api/order/me`          | Lấy orders của user | ✅            | User  |
-| GET    | `/api/order/{id}`        | Lấy chi tiết order  | ✅            | User  |
-| POST   | `/api/order/create`      | Tạo order mới       | ✅            | User  |
-| DELETE | `/api/order/cancel/{id}` | Hủy order           | ✅            | User  |
+| Method | Endpoint                 | Description       | Auth Required | Role  |
+| ------ | ------------------------ | ----------------- | ------------- | ----- |
+| GET    | `/api/order`             | Get all orders    | ✅            | Admin |
+| GET    | `/api/order/me`          | Get user's orders | ✅            | User  |
+| GET    | `/api/order/{id}`        | Get order details | ✅            | User  |
+| POST   | `/api/order/create`      | Create new order  | ✅            | User  |
+| DELETE | `/api/order/cancel/{id}` | Cancel order      | ✅            | User  |
 
 ### Payment Endpoints
 
-| Method | Endpoint                                | Description                    | Auth Required |
-| ------ | --------------------------------------- | ------------------------------ | ------------- |
-| POST   | `/api/payment/create-link`              | Tạo payment link               | ✅            |
-| GET    | `/api/payment/check-status/{orderCode}` | Kiểm tra trạng thái thanh toán | ✅            |
+| Method | Endpoint                                | Description          | Auth Required |
+| ------ | --------------------------------------- | -------------------- | ------------- |
+| POST   | `/api/payment/create-link`              | Create payment link  | ✅            |
+| GET    | `/api/payment/check-status/{orderCode}` | Check payment status | ✅            |
 
 ### Upload Endpoint
 
-| Method | Endpoint           | Description        | Auth Required |
-| ------ | ------------------ | ------------------ | ------------- |
-| POST   | `/api/upload/file` | Upload file lên S3 | ✅            |
+| Method | Endpoint           | Description       | Auth Required |
+| ------ | ------------------ | ----------------- | ------------- |
+| POST   | `/api/upload/file` | Upload file to S3 | ✅            |
 
 ## 🗄 Database Schema
 
@@ -595,13 +595,13 @@ sequenceDiagram
 
 ### Payment Status
 
--   `PENDING` - Đang chờ thanh toán
--   `PAID` - Đã thanh toán thành công
--   `CANCELLED` - Đã hủy
+-   `PENDING` - Awaiting payment
+-   `PAID` - Payment successful
+-   `CANCELLED` - Payment cancelled
 
 ## 🧪 Testing
 
-### Chạy tests
+### Run tests
 
 ```bash
 # Run all tests
@@ -725,10 +725,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-Nếu bạn gặp vấn đề hoặc có câu hỏi, vui lòng:
+If you encounter any issues or have questions, please:
 
--   Mở một issue trên GitHub
--   Liên hệ qua email: your-email@example.com
+-   Open an issue on GitHub
+-   Contact via email: truongnguyen060603@gmail.com
 
 ---
 
