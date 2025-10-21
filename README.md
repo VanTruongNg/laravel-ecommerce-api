@@ -18,6 +18,7 @@
 -   [Project Structure](#-project-structure)
 -   [Installation](#-installation)
 -   [Environment Configuration](#-environment-configuration)
+-   [Queue & Background Jobs](#-queue--background-jobs)
 -   [API Endpoints](#-api-endpoints)
 -   [Database Schema](#-database-schema)
 -   [Authentication & Authorization](#-authentication--authorization)
@@ -43,6 +44,7 @@
 -   ✅ OAuth2 Google login
 -   ✅ File upload with AWS S3
 -   ✅ Redis caching & session management
+-   ✅ Background job processing with queue workers
 -   ✅ Docker containerization
 
 ## 🚀 Key Features
@@ -125,10 +127,12 @@
 -   **Pest PHP** - Modern testing framework
 -   **Laravel Pint** - Code style fixer
 
-### Email
+### Email & Queue
 
 -   **Laravel Mail** - Email sending with blade templates
 -   **SMTP** - Email delivery configuration
+-   **Laravel Queue** - Background job processing with database driver
+-   **Queue Workers** - Asynchronous email delivery
 
 ## 📁 Project Structure
 
@@ -249,6 +253,18 @@ php artisan serve
 
 API will run on `http://localhost:8000`
 
+#### 9. Start queue worker (for background jobs)
+
+```bash
+# In a separate terminal
+php artisan queue:work
+
+# Or use queue:listen for development
+php artisan queue:listen
+```
+
+This will process background jobs like sending emails asynchronously.
+
 ## ⚙️ Environment Configuration
 
 ### Database Configuration
@@ -320,7 +336,119 @@ GOOGLE_CLIENT_SECRET=your-google-client-secret
 GOOGLE_REDIRECT_URI=http://localhost:8000/api/auth/google/callback
 ```
 
-## 📡 API Endpoints
+### Queue Configuration
+
+```env
+QUEUE_CONNECTION=database    # Use database driver for queues
+DB_QUEUE_TABLE=jobs         # Table name for storing jobs
+DB_QUEUE=default            # Default queue name
+DB_QUEUE_RETRY_AFTER=90     # Retry after seconds
+```
+
+## � Queue & Background Jobs
+
+### Overview
+
+This application uses Laravel Queue system to handle background jobs asynchronously, improving performance and user experience. Email sending operations are processed in the background using queue workers.
+
+### Queue Driver
+
+-   **Driver**: Database
+-   **Table**: `jobs`
+-   **Configuration**: `config/queue.php`
+
+### Queued Jobs
+
+#### Email Jobs
+
+All emails are sent asynchronously using queues:
+
+-   **Email Verification** - Sent after user registration
+-   **Password Reset** - Sent when user requests password reset
+-   **Resend Verification** - Sent when user requests verification email resend
+
+#### Implementation
+
+```php
+// Email classes use Queueable trait
+use Illuminate\Bus\Queueable;
+use Illuminate\Queue\SerializesModels;
+
+class VerificationEmail extends Mailable
+{
+    use Queueable, SerializesModels;
+    // ...
+}
+
+// Emails are queued using queue() method
+Mail::to($user->email)->queue(new VerificationEmail($user, $token));
+```
+
+### Queue Commands
+
+```bash
+# Start queue worker (processes jobs continuously)
+php artisan queue:work
+
+# Start queue listener (auto-reloads on code changes)
+php artisan queue:listen
+
+# Process only one job
+php artisan queue:work --once
+
+# Process jobs for specific queue
+php artisan queue:work --queue=emails
+
+# See failed jobs
+php artisan queue:failed
+
+# Retry failed job
+php artisan queue:retry {id}
+
+# Retry all failed jobs
+php artisan queue:retry all
+
+# Clear all jobs from queue
+php artisan queue:clear
+
+# Monitor queue in real-time
+php artisan queue:monitor
+```
+
+### Queue Table Migration
+
+Create the jobs table for database driver:
+
+```bash
+php artisan queue:table
+php artisan migrate
+```
+
+This creates:
+
+-   `jobs` table - Stores pending jobs
+-   `failed_jobs` table - Stores failed jobs for retry
+
+### Development vs Production
+
+**Development:**
+
+```bash
+# Run queue worker in terminal
+php artisan queue:listen
+```
+
+**Production:**
+
+Use Supervisor to keep queue workers running (see Deployment section).
+
+### Monitoring
+
+-   Check pending jobs count: Check `jobs` table
+-   Check failed jobs: `php artisan queue:failed`
+-   Queue dashboard: Consider using Laravel Horizon for Redis queues
+
+## �📡 API Endpoints
 
 ### Authentication Endpoints
 
@@ -632,8 +760,43 @@ php artisan test --coverage
 -   [ ] Run `php artisan config:cache`
 -   [ ] Run `php artisan route:cache`
 -   [ ] Run `php artisan view:cache`
+-   [ ] Create jobs table: `php artisan queue:table && php artisan migrate`
 -   [ ] Set up queue worker with supervisor
 -   [ ] Configure backup strategy
+
+### Queue Worker Setup (Supervisor)
+
+For production, use Supervisor to keep queue workers running:
+
+```ini
+[program:laravel-worker]
+process_name=%(program_name)s_%(process_num)02d
+command=php /path/to/artisan queue:work database --sleep=3 --tries=3 --max-time=3600
+autostart=true
+autorestart=true
+stopasgroup=true
+killasgroup=true
+user=www-data
+numprocs=2
+redirect_stderr=true
+stdout_logfile=/path/to/worker.log
+stopwaitsecs=3600
+```
+
+Install and configure:
+
+```bash
+# Install supervisor
+sudo apt-get install supervisor
+
+# Create config file
+sudo nano /etc/supervisor/conf.d/laravel-worker.conf
+
+# Update supervisor
+sudo supervisorctl reread
+sudo supervisorctl update
+sudo supervisorctl start laravel-worker:*
+```
 
 ### Performance Optimization
 
